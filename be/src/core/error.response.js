@@ -1,0 +1,44 @@
+class ApiError extends Error {
+  constructor(message, statusCode) {
+    super(message);
+    this.statusCode = statusCode;
+  }
+}
+
+export class BadRequestError extends ApiError {
+  constructor(message = "Bad Request") {
+    super(message, 400);
+  }
+}
+
+export class UnauthorizedError extends ApiError {
+  constructor(message = "Unauthorized") {
+    super(message, 401);
+  }
+}
+
+export class ForbiddenError extends ApiError {
+  constructor(message = "Forbidden") {
+    super(message, 403);
+  }
+}
+
+export class NotFoundError extends ApiError {
+  constructor(message = "Not Found") {
+    super(message, 404);
+  }
+}
+
+export class ConflictError extends ApiError {
+  constructor(message = "Conflict") {
+    super(message, 409);
+  }
+}
+
+export class InternalServerError extends ApiError {
+  constructor(message = "Internal Server Error") {
+    super(message, 500);
+  }
+}
+
+export default ApiError;

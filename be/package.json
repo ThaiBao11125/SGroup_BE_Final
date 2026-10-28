@@ -1,0 +1,30 @@
+{
+  "name": "sgroup_be_training",
+  "version": "1.0.0",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ThaiBao11125/SGroup_BE_Training.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ThaiBao11125/SGroup_BE_Training/issues"
+  },
+  "homepage": "https://github.com/ThaiBao11125/SGroup_BE_Training#readme",
+  "description": "",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1141.0",
+    "bcrypt": "^6.0.0",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "express-validator": "^7.3.2",
+    "jsonwebtoken": "^9.0.3",
+    "multer": "^2.4.0",
+    "pg": "^8.23.0"
+  }
+}
