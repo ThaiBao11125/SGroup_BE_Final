@@ -120,3 +120,9 @@ export const addMemberRules = [
     .notEmpty().withMessage("Vui lòng cung cấp memberId")
     .isInt({ min: 1 }).withMessage("memberId phải là số nguyên dương"),
 ];
+
+export const updateMemberStatusRules = [
+  body("status")
+    .notEmpty().withMessage("Vui lòng cung cấp trạng thái mới")
+    .isIn(['ACTIVE', 'DROPPED', 'COMPLETED']).withMessage("Trạng thái chỉ được là ACTIVE, DROPPED, hoặc COMPLETED"),
+];
