@@ -126,3 +126,34 @@ export const updateMemberStatusRules = [
     .notEmpty().withMessage("Vui lòng cung cấp trạng thái mới")
     .isIn(['ACTIVE', 'DROPPED', 'COMPLETED']).withMessage("Trạng thái chỉ được là ACTIVE, DROPPED, hoặc COMPLETED"),
 ];
+
+export const createLessonRules = [
+  body("title")
+    .trim()
+    .notEmpty().withMessage("Tiêu đề bài học không được để trống")
+    .isLength({ min: 2, max: 255 }).withMessage("Tiêu đề bài học phải từ 2 đến 255 ký tự"),
+
+  body("content")
+    .optional()
+    .trim(),
+
+  body("order")
+    .optional()
+    .isInt({ min: 1 }).withMessage("Thứ tự bài học (order) phải là số nguyên dương (>= 1)"),
+];
+
+export const updateLessonRules = [
+  body("title")
+    .optional()
+    .trim()
+    .isLength({ min: 2, max: 255 }).withMessage("Tiêu đề bài học phải từ 2 đến 255 ký tự"),
+
+  body("content")
+    .optional()
+    .trim(),
+
+  body("order")
+    .optional()
+    .isInt({ min: 1 }).withMessage("Thứ tự bài học (order) phải là số nguyên dương (>= 1)"),
+];
+

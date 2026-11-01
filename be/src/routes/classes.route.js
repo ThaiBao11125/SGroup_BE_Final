@@ -1,7 +1,14 @@
 import { Router } from "express";
 import * as classController from "../controller/class.controller.js";
+import * as lessonController from "../controller/lesson.controller.js";
 import { authenticateToken, authorizeRoles } from "../middleware/auth.middleware.js";
-import { validate, createClassRules, updateClassRules, addMemberRules } from "../middleware/validate.js";
+import {
+  validate,
+  createClassRules,
+  updateClassRules,
+  addMemberRules,
+  createLessonRules,
+} from "../middleware/validate.js";
 
 const router = Router();
 
@@ -16,5 +23,9 @@ router.delete("/:id", authorizeRoles("ADMIN"), classController.deleteClass);
 router.get("/:id/members", classController.getMembers);
 router.post("/:id/members", authorizeRoles("ADMIN"), validate(addMemberRules), classController.addMember);
 router.delete("/:id/members/:memberId", authorizeRoles("ADMIN"), classController.removeMember);
+
+router.get("/:id/lessons", lessonController.getLessonsByClassId);
+router.post("/:id/lessons", validate(createLessonRules), lessonController.createLesson);
+router.get("/:id/progress", lessonController.getClassProgress);
 
 export default router;
