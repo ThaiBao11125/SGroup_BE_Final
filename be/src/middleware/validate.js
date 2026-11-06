@@ -1,4 +1,4 @@
-import { validationResult, body } from 'express-validator';
+import { validationResult, body, param } from 'express-validator';
 import { BadRequestError } from '../core/error.response.js';
 
 export const validate = (rules) => {
@@ -157,3 +157,118 @@ export const updateLessonRules = [
     .isInt({ min: 1 }).withMessage("Thứ tự bài học (order) phải là số nguyên dương (>= 1)"),
 ];
 
+export const createAssignmentRules = [
+  param("id")
+    .isInt({ min: 1 })
+    .withMessage("ID lớp học phải là số nguyên dương"),
+
+  body("title")
+    .trim()
+    .notEmpty()
+    .withMessage("Tiêu đề bài tập không được để trống")
+    .bail()
+    .isLength({ min: 2, max: 255 })
+    .withMessage("Tiêu đề bài tập phải từ 2 đến 255 ký tự"),
+
+  body("description")
+    .optional()
+    .trim(),
+
+  body("deadline")
+    .notEmpty()
+    .withMessage("Hạn nộp không được để trống")
+    .bail()
+    .isISO8601({ strict: true, strictSeparator: true })
+    .withMessage("Deadline phải đúng định dạng ISO 8601")
+    .bail()
+    .custom((value) => {
+      return /(?:Z|[+-]\d{2}:\d{2})$/i.test(value);
+    })
+    .withMessage("Deadline bắt buộc phải có múi giờ, ví dụ +07:00 hoặc Z")
+    .bail()
+    .custom((value) => !Number.isNaN(Date.parse(value)))
+    .withMessage("Deadline không phải ngày giờ hợp lệ"),
+
+  body("maximumScore")
+    .optional()
+    .isFloat({ gt: 0, max: 999.99 })
+    .withMessage("Điểm tối đa phải lớn hơn 0 và không vượt quá 999.99")
+    .bail()
+    .isDecimal({ decimal_digits: "0,2" })
+    .withMessage("Điểm tối đa chỉ được có tối đa 2 chữ số thập phân"),
+];
+
+export const classIdParamRules = [
+  param("id")
+    .isInt({ min: 1 })
+    .withMessage("ID lớp học phải là số nguyên dương"),
+];
+
+export const assignmentIdParamRules = [
+  param("id")
+    .isInt({ min: 1 })
+    .withMessage("ID bài tập phải là số nguyên dương"),
+];
+
+const UPDATE_ASSIGNMENT_FIELDS = ["title", "description", "deadline", "maximumScore"];
+
+export const updateAssignmentRules = [
+  param("id")
+    .isInt({ min: 1 })
+    .withMessage("ID bài tập phải là số nguyên dương"),
+
+  body()
+    .custom((_, { req }) => {
+      const b = req.body;
+      if (!b || typeof b !== "object" || Array.isArray(b)) {
+        throw new Error("Body không hợp lệ");
+      }
+      const keys = Object.keys(b);
+      if (keys.length === 0) {
+        throw new Error("Cần ít nhất một trường để cập nhật");
+      }
+      const invalid = keys.filter((k) => !UPDATE_ASSIGNMENT_FIELDS.includes(k));
+      if (invalid.length > 0) {
+        throw new Error(`Không được phép cập nhật các trường: ${invalid.join(", ")}`);
+      }
+      return true;
+    }),
+
+  body("title")
+    .optional()
+    .trim()
+    .notEmpty()
+    .withMessage("Tiêu đề bài tập không được để trống")
+    .bail()
+    .isLength({ min: 2, max: 255 })
+    .withMessage("Tiêu đề bài tập phải từ 2 đến 255 ký tự"),
+
+  body("description")
+    .optional({ values: "null" })
+    .isString()
+    .withMessage("Mô tả phải là chuỗi hoặc null")
+    .bail()
+    .trim(),
+
+  body("deadline")
+    .optional()
+    .notEmpty()
+    .withMessage("Hạn nộp không được để trống")
+    .bail()
+    .isISO8601({ strict: true, strictSeparator: true })
+    .withMessage("Deadline phải đúng định dạng ISO 8601")
+    .bail()
+    .custom((value) => /(?:Z|[+-]\d{2}:\d{2})$/i.test(value))
+    .withMessage("Deadline bắt buộc phải có múi giờ, ví dụ +07:00 hoặc Z")
+    .bail()
+    .custom((value) => !Number.isNaN(Date.parse(value)))
+    .withMessage("Deadline không phải ngày giờ hợp lệ"),
+
+  body("maximumScore")
+    .optional()
+    .isFloat({ gt: 0, max: 999.99 })
+    .withMessage("Điểm tối đa phải lớn hơn 0 và không vượt quá 999.99")
+    .bail()
+    .isDecimal({ decimal_digits: "0,2" })
+    .withMessage("Điểm tối đa chỉ được có tối đa 2 chữ số thập phân"),
+];

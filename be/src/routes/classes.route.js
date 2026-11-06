@@ -1,6 +1,7 @@
 import { Router } from "express";
 import * as classController from "../controller/class.controller.js";
 import * as lessonController from "../controller/lesson.controller.js";
+import * as assignmentController from "../controller/assignment.controller.js";
 import { authenticateToken, authorizeRoles } from "../middleware/auth.middleware.js";
 import {
   validate,
@@ -8,6 +9,8 @@ import {
   updateClassRules,
   addMemberRules,
   createLessonRules,
+  createAssignmentRules,
+  classIdParamRules,
 } from "../middleware/validate.js";
 
 const router = Router();
@@ -27,5 +30,8 @@ router.delete("/:id/members/:memberId", authorizeRoles("ADMIN"), classController
 router.get("/:id/lessons", lessonController.getLessonsByClassId);
 router.post("/:id/lessons", validate(createLessonRules), lessonController.createLesson);
 router.get("/:id/progress", lessonController.getClassProgress);
+
+router.post("/:id/assignments", validate(createAssignmentRules), assignmentController.createAssignment);
+router.get("/:id/assignments", validate(classIdParamRules), assignmentController.getAssignmentsByClassId);
 
 export default router;
