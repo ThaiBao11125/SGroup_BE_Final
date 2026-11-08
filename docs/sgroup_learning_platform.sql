@@ -173,11 +173,11 @@ CREATE INDEX idx_submissions_assignment_id ON submissions(assignment_id);
 CREATE INDEX idx_submissions_member_id ON submissions(member_id);
 CREATE INDEX idx_submissions_status ON submissions(status);
 
-INSERT INTO users (name, email, password, role) VALUES
-('Admin S-Group', 'admin@sgroup.vn', '$2b$10$hashedAdminPasswordSample', 'ADMIN'),
-('Mentor Van A', 'mentor.vana@sgroup.vn', '$2b$10$hashedMentorPasswordSample', 'MEMBER'),
-('Student Nguyen B', 'student.nguyenb@sgroup.vn', '$2b$10$hashedStudentPasswordSample', 'MEMBER'),
-('Student Le C', 'student.lec@sgroup.vn', '$2b$10$hashedStudentPasswordSample', 'MEMBER');
+INSERT INTO users (name, email, password, age, role) VALUES
+('Admin S-Group', 'admin@sgroup.vn', '$2b$10$fQjfEvUZxhsdQXaL/e7DheBhB.yLqOOHV8qKlr2VFiWW7Jka84mRu', 30, 'ADMIN'),
+('Mentor Van A', 'mentor.vana@sgroup.vn', '$2b$10$fQjfEvUZxhsdQXaL/e7DheBhB.yLqOOHV8qKlr2VFiWW7Jka84mRu', 26, 'MEMBER'),
+('Student Nguyen B', 'student.nguyenb@sgroup.vn', '$2b$10$fQjfEvUZxhsdQXaL/e7DheBhB.yLqOOHV8qKlr2VFiWW7Jka84mRu', 21, 'MEMBER'),
+('Student Le C', 'student.lec@sgroup.vn', '$2b$10$fQjfEvUZxhsdQXaL/e7DheBhB.yLqOOHV8qKlr2VFiWW7Jka84mRu', 22, 'MEMBER');
 
 INSERT INTO classes (name, description, start_date, end_date, mentor_id) VALUES
 ('BE Basic - Batch 01', 'Khoá đào tạo Backend cơ bản S-Group: ExpressJS, PostgreSQL, RESTful API.', '2026-03-01', '2026-05-30', 2);

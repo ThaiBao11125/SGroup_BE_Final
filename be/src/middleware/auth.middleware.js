@@ -1,5 +1,5 @@
 import { UnauthorizedError, ForbiddenError } from "../core/error.response.js";
-import { verifyToken } from "../utils/jwt.helper.js";
+import { verifyToken, isTokenBlacklisted } from "../utils/jwt.helper.js";
 
 export const authenticateToken = (req, res, next) => {
   const authHeader = req.headers["authorization"];
@@ -10,10 +10,15 @@ export const authenticateToken = (req, res, next) => {
 
   const token = authHeader.split(" ")[1];
 
+  if (isTokenBlacklisted(token)) {
+    throw new UnauthorizedError("Token đã bị vô hiệu hóa do đã đăng xuất, vui lòng đăng nhập lại!");
+  }
+
   try {
     const decoded = verifyToken(token);
 
     req.user = decoded;
+    req.token = token;
 
     next();
   } catch (error) {

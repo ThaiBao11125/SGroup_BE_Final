@@ -10,3 +10,15 @@ export const generateToken = (payload) => {
 export const verifyToken = (token) => {
   return jwt.verify(token, config.jwt.secret);
 };
+
+const tokenBlacklist = new Set();
+
+export const blacklistToken = (token) => {
+  if (token) {
+    tokenBlacklist.add(token);
+  }
+};
+
+export const isTokenBlacklisted = (token) => {
+  return tokenBlacklist.has(token);
+};
