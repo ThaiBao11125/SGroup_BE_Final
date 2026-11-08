@@ -272,3 +272,56 @@ export const updateAssignmentRules = [
     .isDecimal({ decimal_digits: "0,2" })
     .withMessage("Điểm tối đa chỉ được có tối đa 2 chữ số thập phân"),
 ];
+
+export const createSubmissionRules = [
+  param("id")
+    .isInt({ min: 1 })
+    .withMessage("ID bài tập phải là số nguyên dương"),
+
+  body("repositoryUrl")
+    .trim()
+    .notEmpty()
+    .withMessage("URL repository không được để trống")
+    .bail()
+    .isURL()
+    .withMessage("URL repository không đúng định dạng URL hợp lệ")
+    .bail()
+    .isLength({ max: 500 })
+    .withMessage("URL repository không được vượt quá 500 ký tự"),
+
+  body("content")
+    .optional({ values: "null" })
+    .isString()
+    .withMessage("Nội dung nộp bài phải là chuỗi")
+    .bail()
+    .trim(),
+];
+
+export const submissionIdParamRules = [
+  param("id")
+    .isInt({ min: 1 })
+    .withMessage("ID bài nộp phải là số nguyên dương"),
+];
+
+export const reviewSubmissionRules = [
+  param("id")
+    .isInt({ min: 1 })
+    .withMessage("ID bài nộp phải là số nguyên dương"),
+
+  body("score")
+    .notEmpty()
+    .withMessage("Vui lòng cung cấp điểm số")
+    .bail()
+    .isFloat({ min: 0, max: 999.99 })
+    .withMessage("Điểm số phải là số lớn hơn hoặc bằng 0 và không vượt quá 999.99")
+    .bail()
+    .isDecimal({ decimal_digits: "0,2" })
+    .withMessage("Điểm số chỉ được có tối đa 2 chữ số thập phân"),
+
+  body("feedback")
+    .optional({ values: "null" })
+    .isString()
+    .withMessage("Nhận xét phải là chuỗi")
+    .bail()
+    .trim(),
+];

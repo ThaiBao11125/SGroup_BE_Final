@@ -1,0 +1,4293 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "S-Group Learning Platform API",
+    "version": "1.0.0",
+    "description": "Tài liệu đặc tả API chuẩn OpenAPI 3.0 cho hệ thống quản lý học tập S-Group (S-Group Learning Platform).\nHệ thống hỗ trợ quản lý người dùng, phân quyền RBAC (ADMIN, MEMBER, Mentor), quản lý lớp học, bài học, tiến độ học tập, bài tập (assignments) và tải lên tệp tin lên Cloudflare R2.",
+    "contact": {
+      "name": "S-Group Support",
+      "email": "contact@sgroup.vn"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000/api",
+      "description": "Local Development Server (Base: /api)"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Auth",
+      "description": "Xác thực tài khoản (Đăng ký, Đăng nhập, Lấy thông tin cá nhân hiện tại)"
+    },
+    {
+      "name": "Users",
+      "description": "Quản lý người dùng trong hệ thống (Chỉ dành cho ADMIN)"
+    },
+    {
+      "name": "Classes",
+      "description": "Quản lý thông tin lớp học (Tạo, Xem danh sách, Chi tiết, Cập nhật, Xóa)"
+    },
+    {
+      "name": "Class Members",
+      "description": "Quản lý học viên trong từng lớp học (Thêm học viên, Xóa học viên, Cập nhật trạng thái)"
+    },
+    {
+      "name": "Lessons",
+      "description": "Quản lý bài học và theo dõi tiến độ học tập (Hoàn thành bài học, % tiến độ)"
+    },
+    {
+      "name": "Assignments",
+      "description": "Quản lý bài tập do Mentor phụ trách giao cho lớp học"
+    },
+    {
+      "name": "Upload",
+      "description": "Tải lên tệp tin (Hình ảnh, Tài liệu) lưu trữ trên Cloudflare R2"
+    },
+    {
+      "name": "Submissions",
+      "description": "Quản lý nộp bài và chấm điểm bài tập (Học viên nộp bài qua GitHub, Mentor chấm điểm và viết nhận xét)"
+    }
+  ],
+  "paths": {
+    "/auth/register": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Đăng ký tài khoản thành viên mới",
+        "description": "Tạo tài khoản người dùng mới với vai trò mặc định là MEMBER.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRequest"
+              },
+              "example": {
+                "name": "Nguyen Van A",
+                "email": "nguyenvana@gmail.com",
+                "password": "password123",
+                "age": 20
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Đăng ký tài khoản thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegisterResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "Đăng ký tài khoản thành công!",
+                  "data": {
+                    "id": 5,
+                    "name": "Nguyen Van A",
+                    "email": "nguyenvana@gmail.com",
+                    "age": 20,
+                    "role": "MEMBER",
+                    "created_at": "2026-11-06T15:00:00.000Z"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "409": {
+            "description": "Email đã được sử dụng",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Email này đã được sử dụng!"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Đăng nhập hệ thống",
+        "description": "Xác thực người dùng qua email và mật khẩu, trả về JWT Access Token.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              },
+              "example": {
+                "email": "admin@sgroup.vn",
+                "password": "hashedAdminPasswordSample"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Đăng nhập thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "Đăng nhập thành công!",
+                  "data": {
+                    "user": {
+                      "id": 1,
+                      "name": "Admin S-Group",
+                      "email": "admin@sgroup.vn",
+                      "role": "ADMIN"
+                    },
+                    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "description": "Email hoặc mật khẩu không chính xác",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Email hoặc mật khẩu không chính xác!"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Lấy thông tin cá nhân người dùng hiện tại",
+        "description": "Trả về thông tin chi tiết hồ sơ người dùng đang đăng nhập dựa vào Access Token.",
+        "responses": {
+          "200": {
+            "description": "Lấy thông tin cá nhân thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfileResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "Lấy thông tin cá nhân thành công!",
+                  "data": {
+                    "id": 1,
+                    "name": "Admin S-Group",
+                    "email": "admin@sgroup.vn",
+                    "age": 22,
+                    "role": "ADMIN",
+                    "created_at": "2026-11-06T15:00:00.000Z"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Đăng xuất tài khoản",
+        "description": "Thu hồi token JWT hiện tại và đưa vào danh sách đen (blacklist). Sau khi đăng xuất, token này không thể sử dụng để gọi các API được bảo vệ nữa.",
+        "responses": {
+          "200": {
+            "description": "Đăng xuất thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Đăng xuất thành công!"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "message"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/users": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Lấy danh sách tất cả người dùng",
+        "description": "Yêu cầu quyền ADMIN. Trả về danh sách toàn bộ người dùng trong hệ thống.",
+        "responses": {
+          "200": {
+            "description": "Lấy danh sách người dùng thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsersListResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "Get all users successfully",
+                  "data": [
+                    {
+                      "id": 1,
+                      "name": "Admin S-Group",
+                      "email": "admin@sgroup.vn",
+                      "age": 25,
+                      "role": "ADMIN",
+                      "avatar_url": null,
+                      "created_at": "2026-11-06T15:00:00.000Z",
+                      "updated_at": "2026-11-06T15:00:00.000Z"
+                    },
+                    {
+                      "id": 2,
+                      "name": "Mentor Van A",
+                      "email": "mentor.vana@sgroup.vn",
+                      "age": 24,
+                      "role": "MEMBER",
+                      "avatar_url": null,
+                      "created_at": "2026-11-06T15:00:00.000Z",
+                      "updated_at": "2026-11-06T15:00:00.000Z"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Tạo mới người dùng (Admin)",
+        "description": "Yêu cầu quyền ADMIN. Cho phép Admin tạo người dùng mới và phân quyền (ADMIN / MEMBER).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUserRequest"
+              },
+              "example": {
+                "name": "Nguyen Van B",
+                "email": "nguyenvanb@sgroup.vn",
+                "password": "password123",
+                "age": 21,
+                "role": "MEMBER"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Thêm người dùng thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "User added successfully",
+                  "data": {
+                    "id": 6,
+                    "name": "Nguyen Van B",
+                    "email": "nguyenvanb@sgroup.vn",
+                    "age": 21,
+                    "role": "MEMBER",
+                    "created_at": "2026-11-06T15:00:00.000Z"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/users/{id}": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Lấy thông tin người dùng theo ID",
+        "description": "Yêu cầu quyền ADMIN. Xem thông tin chi tiết một người dùng cụ thể.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID người dùng",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "example": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lấy thông tin người dùng thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "Get user successfully",
+                  "data": {
+                    "id": 1,
+                    "name": "Admin S-Group",
+                    "email": "admin@sgroup.vn",
+                    "age": 25,
+                    "role": "ADMIN",
+                    "created_at": "2026-11-06T15:00:00.000Z"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Cập nhật thông tin người dùng",
+        "description": "Yêu cầu quyền ADMIN. Cập nhật tên, email hoặc tuổi của người dùng.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID người dùng",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "example": 2
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserRequest"
+              },
+              "example": {
+                "name": "Mentor Van A Updated",
+                "email": "mentor.vana.updated@sgroup.vn",
+                "age": 25
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cập nhật người dùng thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserFullResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "User updated successfully",
+                  "data": {
+                    "id": 2,
+                    "name": "Mentor Van A Updated",
+                    "email": "mentor.vana.updated@sgroup.vn",
+                    "age": 25,
+                    "role": "MEMBER",
+                    "avatar_url": null,
+                    "created_at": "2026-11-06T15:00:00.000Z",
+                    "updated_at": "2026-11-06T15:05:00.000Z"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Xóa người dùng",
+        "description": "Yêu cầu quyền ADMIN. Xóa người dùng theo ID.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID người dùng",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "example": 5
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Xóa người dùng thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserFullResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "User deleted successfully",
+                  "data": {
+                    "id": 5,
+                    "name": "Nguyen Van A",
+                    "email": "nguyenvana@gmail.com",
+                    "age": 20,
+                    "role": "MEMBER",
+                    "avatar_url": null,
+                    "created_at": "2026-11-06T15:00:00.000Z",
+                    "updated_at": "2026-11-06T15:00:00.000Z"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/classes": {
+      "get": {
+        "tags": [
+          "Classes"
+        ],
+        "summary": "Lấy danh sách các lớp học",
+        "description": "Nếu là ADMIN: Xem toàn bộ danh sách lớp học kèm sĩ số tổng thành viên (total_members).\nNếu là MEMBER: Chỉ xem các lớp học mà mình tham gia (với tư cách học viên hoặc mentor phụ trách).",
+        "responses": {
+          "200": {
+            "description": "Lấy danh sách lớp học thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClassesListResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "Lấy danh sách lớp học thành công!",
+                  "data": [
+                    {
+                      "id": 1,
+                      "name": "BE Basic - Batch 01",
+                      "description": "Khoá đào tạo Backend cơ bản S-Group: ExpressJS, PostgreSQL, RESTful API.",
+                      "start_date": "2026-03-01",
+                      "end_date": "2026-05-30",
+                      "mentor_id": 2,
+                      "created_at": "2026-11-06T15:00:00.000Z",
+                      "updated_at": "2026-11-06T15:00:00.000Z",
+                      "mentor_name": "Mentor Van A",
+                      "mentor_email": "mentor.vana@sgroup.vn",
+                      "total_members": 2
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Classes"
+        ],
+        "summary": "Tạo mới lớp học",
+        "description": "Yêu cầu quyền ADMIN. Khởi tạo một lớp học và chỉ định Mentor phụ trách.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateClassRequest"
+              },
+              "example": {
+                "name": "BE Basic - Batch 02",
+                "description": "Khóa đào tạo chuyên sâu Backend Node.js đợt 2",
+                "startDate": "2026-06-01",
+                "endDate": "2026-08-31",
+                "mentorId": 2
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Tạo lớp học thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClassItemResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "Tạo lớp học thành công!",
+                  "data": {
+                    "id": 2,
+                    "name": "BE Basic - Batch 02",
+                    "description": "Khóa đào tạo chuyên sâu Backend Node.js đợt 2",
+                    "start_date": "2026-06-01",
+                    "end_date": "2026-08-31",
+                    "mentor_id": 2,
+                    "created_at": "2026-11-06T15:10:00.000Z",
+                    "updated_at": "2026-11-06T15:10:00.000Z"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "description": "Mentor được chỉ định không tồn tại",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Mentor được chỉ định không tồn tại trên hệ thống!"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/classes/{id}": {
+      "get": {
+        "tags": [
+          "Classes"
+        ],
+        "summary": "Lấy thông tin chi tiết lớp học",
+        "description": "Dành cho ADMIN, hoặc MEMBER nếu là Mentor phụ trách hoặc học viên trong lớp.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID của lớp học",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "example": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lấy thông tin lớp học thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClassDetailResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "Lấy thông tin lớp học thành công!",
+                  "data": {
+                    "id": 1,
+                    "name": "BE Basic - Batch 01",
+                    "description": "Khoá đào tạo Backend cơ bản S-Group: ExpressJS, PostgreSQL, RESTful API.",
+                    "start_date": "2026-03-01",
+                    "end_date": "2026-05-30",
+                    "mentor_id": 2,
+                    "created_at": "2026-11-06T15:00:00.000Z",
+                    "updated_at": "2026-11-06T15:00:00.000Z",
+                    "mentor_name": "Mentor Van A",
+                    "mentor_email": "mentor.vana@sgroup.vn"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "description": "Không có quyền truy cập lớp học này",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Bạn không có quyền truy cập thông tin lớp học này!"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Classes"
+        ],
+        "summary": "Cập nhật thông tin lớp học",
+        "description": "Yêu cầu quyền ADMIN. Cập nhật tên, mô tả, ngày học hoặc đổi mentor cho lớp.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID của lớp học",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "example": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateClassRequest"
+              },
+              "example": {
+                "name": "BE Basic - Batch 01 (Updated)",
+                "description": "Nội dung cập nhật mới",
+                "endDate": "2026-06-15"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cập nhật lớp học thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClassItemResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "Cập nhật lớp học thành công!",
+                  "data": {
+                    "id": 1,
+                    "name": "BE Basic - Batch 01 (Updated)",
+                    "description": "Nội dung cập nhật mới",
+                    "start_date": "2026-03-01",
+                    "end_date": "2026-06-15",
+                    "mentor_id": 2,
+                    "created_at": "2026-11-06T15:00:00.000Z",
+                    "updated_at": "2026-11-06T15:15:00.000Z"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Classes"
+        ],
+        "summary": "Xóa lớp học",
+        "description": "Yêu cầu quyền ADMIN. Xóa một lớp học theo ID.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID của lớp học",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "example": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Xóa lớp học thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClassItemResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "Xóa lớp học thành công!",
+                  "data": {
+                    "id": 1,
+                    "name": "BE Basic - Batch 01",
+                    "description": "Khoá đào tạo Backend cơ bản S-Group",
+                    "start_date": "2026-03-01",
+                    "end_date": "2026-05-30",
+                    "mentor_id": 2,
+                    "created_at": "2026-11-06T15:00:00.000Z",
+                    "updated_at": "2026-11-06T15:00:00.000Z"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/classes/{id}/members": {
+      "get": {
+        "tags": [
+          "Class Members"
+        ],
+        "summary": "Lấy danh sách học viên trong lớp",
+        "description": "Dành cho ADMIN, hoặc MEMBER (nếu là Mentor phụ trách hoặc học viên trong lớp).",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID lớp học",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "example": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lấy danh sách học viên thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClassMembersListResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "Lấy danh sách học viên thành công!",
+                  "data": [
+                    {
+                      "class_id": 1,
+                      "member_id": 3,
+                      "joined_at": "2026-11-06T15:00:00.000Z",
+                      "status": "ACTIVE",
+                      "name": "Student Nguyen B",
+                      "email": "student.nguyenb@sgroup.vn",
+                      "age": 20,
+                      "avatar_url": null
+                    },
+                    {
+                      "class_id": 1,
+                      "member_id": 4,
+                      "joined_at": "2026-11-06T15:00:00.000Z",
+                      "status": "ACTIVE",
+                      "name": "Student Le C",
+                      "email": "student.lec@sgroup.vn",
+                      "age": 21,
+                      "avatar_url": null
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Class Members"
+        ],
+        "summary": "Thêm học viên vào lớp học",
+        "description": "Yêu cầu quyền ADMIN. Chỉ Admin mới có quyền ghi danh học viên vào lớp.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID lớp học",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "example": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddMemberRequest"
+              },
+              "example": {
+                "memberId": 5
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Thêm học viên vào lớp thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddMemberResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "Thêm học viên vào lớp thành công!",
+                  "data": {
+                    "class_id": 1,
+                    "member_id": 5,
+                    "joined_at": "2026-11-06T15:20:00.000Z",
+                    "status": "ACTIVE"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "409": {
+            "description": "Học viên đã tham gia lớp học từ trước",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Học viên này đã tham gia lớp học từ trước!"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/classes/{id}/members/{memberId}": {
+      "delete": {
+        "tags": [
+          "Class Members"
+        ],
+        "summary": "Xóa học viên khỏi lớp học",
+        "description": "Yêu cầu quyền ADMIN. Loại bỏ học viên khỏi lớp học.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID lớp học",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "example": 1
+            }
+          },
+          {
+            "name": "memberId",
+            "in": "path",
+            "required": true,
+            "description": "ID học viên cần xóa khỏi lớp",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "example": 5
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Xóa học viên khỏi lớp thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClassMemberEntityResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "Xóa học viên khỏi lớp thành công!",
+                  "data": {
+                    "id": 3,
+                    "class_id": 1,
+                    "member_id": 5,
+                    "joined_at": "2026-11-06T15:20:00.000Z",
+                    "status": "ACTIVE"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "description": "Lớp học hoặc học viên không tồn tại trong lớp",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Học viên không có trong lớp học này!"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/classes/{id}/members/{memberId}/status": {
+      "patch": {
+        "tags": [
+          "Class Members"
+        ],
+        "summary": "Cập nhật trạng thái học viên trong lớp",
+        "description": "Yêu cầu quyền ADMIN. Cập nhật trạng thái tham gia (ACTIVE, DROPPED, COMPLETED).",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID lớp học",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "example": 1
+            }
+          },
+          {
+            "name": "memberId",
+            "in": "path",
+            "required": true,
+            "description": "ID học viên",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "example": 3
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMemberStatusRequest"
+              },
+              "example": {
+                "status": "COMPLETED"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cập nhật trạng thái học viên thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClassMemberEntityResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "Cập nhật trạng thái học viên thành công!",
+                  "data": {
+                    "id": 1,
+                    "class_id": 1,
+                    "member_id": 3,
+                    "joined_at": "2026-11-06T15:00:00.000Z",
+                    "status": "COMPLETED"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/classes/{id}/lessons": {
+      "get": {
+        "tags": [
+          "Lessons"
+        ],
+        "summary": "Lấy danh sách bài học của lớp học",
+        "description": "Dành cho ADMIN, Mentor của lớp, hoặc Học viên thuộc lớp học.\nNếu người gọi là học viên thuộc lớp, danh sách bài học sẽ bổ sung trường `is_completed` (boolean) và `completed_at` thể hiện tiến độ học của học viên đó.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID lớp học",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "example": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lấy danh sách bài học thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonsListResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "Lấy danh sách bài học thành công!",
+                  "data": [
+                    {
+                      "id": 1,
+                      "class_id": 1,
+                      "title": "01. Backend Introduction",
+                      "content": "Giới thiệu kiến trúc Client-Server, tổng quan Backend.",
+                      "order": 1,
+                      "created_by": 2,
+                      "created_at": "2026-11-06T15:00:00.000Z",
+                      "updated_at": "2026-11-06T15:00:00.000Z",
+                      "is_completed": true,
+                      "completed_at": "2026-11-06T15:30:00.000Z"
+                    },
+                    {
+                      "id": 2,
+                      "class_id": 1,
+                      "title": "02. HTTP & RESTful API",
+                      "content": "Giao thức HTTP, Methods, Headers, Status Codes.",
+                      "order": 2,
+                      "created_by": 2,
+                      "created_at": "2026-11-06T15:00:00.000Z",
+                      "updated_at": "2026-11-06T15:00:00.000Z",
+                      "is_completed": false,
+                      "completed_at": null
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Lessons"
+        ],
+        "summary": "Tạo bài học mới trong lớp học",
+        "description": "Chỉ Mentor phụ trách lớp học hoặc ADMIN mới có quyền tạo bài học.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID lớp học",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "example": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateLessonRequest"
+              },
+              "example": {
+                "title": "05. Database Optimization & Indexing",
+                "content": "Tìm hiểu B-Tree index, Hash index, Query Plan và tối ưu SQL.",
+                "order": 5
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Tạo bài học thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonDetailResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "Tạo bài học thành công!",
+                  "data": {
+                    "id": 5,
+                    "class_id": 1,
+                    "title": "05. Database Optimization & Indexing",
+                    "content": "Tìm hiểu B-Tree index, Hash index, Query Plan và tối ưu SQL.",
+                    "order": 5,
+                    "created_by": 2,
+                    "created_at": "2026-11-06T15:30:00.000Z",
+                    "updated_at": "2026-11-06T15:30:00.000Z"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "description": "Chỉ Mentor phụ trách lớp học hoặc Admin mới có quyền",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Chỉ Mentor phụ trách lớp học này hoặc Admin mới có quyền tạo bài học!"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "409": {
+            "description": "Thứ tự bài học (order) đã tồn tại trong lớp",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Thứ tự bài học (order) này đã tồn tại trong lớp học!"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/classes/{id}/progress": {
+      "get": {
+        "tags": [
+          "Lessons"
+        ],
+        "summary": "Lấy tiến độ học tập bài học của lớp học",
+        "description": "Trả về tổng số bài học, số bài học đã hoàn thành và phần trăm hoàn thành (% progress).\n- Nếu là Học viên: Xem tiến độ của chính mình.\n- Nếu là Admin hoặc Mentor: Có thể truyền thêm query param `memberId` để xem tiến độ của một học viên cụ thể.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID lớp học",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "example": 1
+            }
+          },
+          {
+            "name": "memberId",
+            "in": "query",
+            "required": false,
+            "description": "ID học viên cần tra cứu tiến độ (Chỉ áp dụng khi người gọi là Admin hoặc Mentor của lớp)",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "example": 3
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lấy tiến độ học tập thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClassProgressResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "Lấy tiến độ học tập thành công!",
+                  "data": {
+                    "totalLessons": 4,
+                    "completedLessons": 2,
+                    "progress": 50
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/lessons/{id}": {
+      "get": {
+        "tags": [
+          "Lessons"
+        ],
+        "summary": "Lấy thông tin chi tiết một bài học",
+        "description": "Dành cho ADMIN, Mentor của lớp hoặc Học viên thuộc lớp học có chứa bài học này.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID bài học",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "example": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lấy thông tin bài học thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonFullDetailResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "Lấy thông tin bài học thành công!",
+                  "data": {
+                    "id": 1,
+                    "class_id": 1,
+                    "title": "01. Backend Introduction",
+                    "content": "Giới thiệu kiến trúc Client-Server, tổng quan Backend.",
+                    "order": 1,
+                    "created_by": 2,
+                    "created_at": "2026-11-06T15:00:00.000Z",
+                    "updated_at": "2026-11-06T15:00:00.000Z",
+                    "class_name": "BE Basic - Batch 01",
+                    "mentor_id": 2,
+                    "creator_name": "Mentor Van A"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Lessons"
+        ],
+        "summary": "Cập nhật bài học",
+        "description": "Dành cho Mentor phụ trách lớp học hoặc Admin.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID bài học",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "example": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateLessonRequest"
+              },
+              "example": {
+                "title": "01. Backend Architecture & REST (Updated)",
+                "content": "Cập nhật nội dung chi tiết bài học..."
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cập nhật bài học thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonDetailResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "Cập nhật bài học thành công!",
+                  "data": {
+                    "id": 1,
+                    "class_id": 1,
+                    "title": "01. Backend Architecture & REST (Updated)",
+                    "content": "Cập nhật nội dung chi tiết bài học...",
+                    "order": 1,
+                    "created_by": 2,
+                    "created_at": "2026-11-06T15:00:00.000Z",
+                    "updated_at": "2026-11-06T15:35:00.000Z"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "409": {
+            "description": "Thứ tự bài học đã bị trùng",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Thứ tự bài học (order) này đã tồn tại trong lớp học!"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Lessons"
+        ],
+        "summary": "Xóa bài học",
+        "description": "Dành cho Mentor phụ trách lớp học hoặc Admin.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID bài học",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "example": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Xóa bài học thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonDetailResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "Xóa bài học thành công!",
+                  "data": {
+                    "id": 1,
+                    "class_id": 1,
+                    "title": "01. Backend Introduction",
+                    "content": "Giới thiệu...",
+                    "order": 1,
+                    "created_by": 2,
+                    "created_at": "2026-11-06T15:00:00.000Z",
+                    "updated_at": "2026-11-06T15:00:00.000Z"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/lessons/{id}/complete": {
+      "post": {
+        "tags": [
+          "Lessons"
+        ],
+        "summary": "Đánh dấu hoàn thành bài học",
+        "description": "Dành cho Học viên thuộc lớp học đánh dấu đã học xong bài này. Nếu đã hoàn thành trước đó sẽ cập nhật lại `completed_at`.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID bài học",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "example": 2
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Đánh dấu hoàn thành bài học thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompleteLessonResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "Đánh dấu hoàn thành bài học thành công!",
+                  "data": {
+                    "id": 4,
+                    "lesson_id": 2,
+                    "member_id": 3,
+                    "completed_at": "2026-11-06T15:40:00.000Z"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "description": "Chỉ học viên thuộc lớp mới có thể hoàn thành",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Chỉ học viên thuộc lớp học mới có thể đánh dấu hoàn thành bài học!"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/classes/{id}/assignments": {
+      "get": {
+        "tags": [
+          "Assignments"
+        ],
+        "summary": "Lấy danh sách bài tập của lớp học",
+        "description": "Dành cho ADMIN, Mentor của lớp, hoặc Học viên thuộc lớp học. Trả về danh sách bài tập sắp xếp theo thời gian tạo mới nhất.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID lớp học",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "example": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lấy danh sách bài tập thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignmentsListResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "Lấy danh sách bài tập thành công!",
+                  "data": [
+                    {
+                      "id": 1,
+                      "class_id": 1,
+                      "title": "Assignment 01: Thiết kế CSDL S-Group Learning Platform",
+                      "description": "Vẽ sơ đồ ERD (.drawio) và viết file DDL SQL có đầy đủ Constraints & Indexes.",
+                      "deadline": "2026-11-13T23:59:59+07:00",
+                      "maximum_score": "10.00",
+                      "created_by": 2,
+                      "created_at": "2026-11-06T15:00:00.000Z",
+                      "updated_at": "2026-11-06T15:00:00.000Z"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Assignments"
+        ],
+        "summary": "Tạo bài tập mới cho lớp học",
+        "description": "Chỉ dành riêng cho Mentor phụ trách lớp học (Người dùng có role MEMBER và là mentor_id của lớp học). ADMIN không có quyền tạo bài tập.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID lớp học",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "example": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAssignmentRequest"
+              },
+              "example": {
+                "title": "Assignment 02: RESTful API với Express.js",
+                "description": "Xây dựng các API CRUD cho Resource Users và Classes theo tiêu chuẩn REST.",
+                "deadline": "2026-11-20T23:59:59+07:00",
+                "maximumScore": 10
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Tạo bài tập thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignmentDetailResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "Tạo bài tập thành công!",
+                  "data": {
+                    "id": 2,
+                    "class_id": 1,
+                    "title": "Assignment 02: RESTful API với Express.js",
+                    "description": "Xây dựng các API CRUD cho Resource Users và Classes theo tiêu chuẩn REST.",
+                    "deadline": "2026-11-20T23:59:59+07:00",
+                    "maximum_score": "10.00",
+                    "created_by": 2,
+                    "created_at": "2026-11-06T15:45:00.000Z",
+                    "updated_at": "2026-11-06T15:45:00.000Z"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "description": "Không có quyền tạo bài tập (Chỉ Mentor phụ trách lớp mới được tạo)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Chỉ Mentor phụ trách lớp học này mới có quyền tạo bài tập!"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/assignments/{id}": {
+      "get": {
+        "tags": [
+          "Assignments"
+        ],
+        "summary": "Lấy thông tin chi tiết một bài tập",
+        "description": "Dành cho ADMIN, Mentor phụ trách lớp hoặc Học viên thuộc lớp học.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID bài tập",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "example": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lấy chi tiết bài tập thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignmentDetailResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "Lấy chi tiết bài tập thành công!",
+                  "data": {
+                    "id": 1,
+                    "class_id": 1,
+                    "title": "Assignment 01: Thiết kế CSDL S-Group Learning Platform",
+                    "description": "Vẽ sơ đồ ERD (.drawio) và viết file DDL SQL có đầy đủ Constraints & Indexes.",
+                    "deadline": "2026-11-13T23:59:59+07:00",
+                    "maximum_score": "10.00",
+                    "created_by": 2,
+                    "created_at": "2026-11-06T15:00:00.000Z",
+                    "updated_at": "2026-11-06T15:00:00.000Z"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Assignments"
+        ],
+        "summary": "Cập nhật bài tập",
+        "description": "Chỉ dành cho Mentor phụ trách lớp học. Chỉ cho phép sửa: title, description, deadline, maximumScore. Cần ít nhất 1 trường và không chứa trường ngoài danh sách.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID bài tập",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "example": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAssignmentRequest"
+              },
+              "example": {
+                "title": "Assignment 01: Thiết kế CSDL (Gia hạn)",
+                "deadline": "2026-11-25T23:59:59+07:00",
+                "maximumScore": 10
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cập nhật bài tập thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignmentDetailResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "Cập nhật bài tập thành công!",
+                  "data": {
+                    "id": 1,
+                    "class_id": 1,
+                    "title": "Assignment 01: Thiết kế CSDL (Gia hạn)",
+                    "description": "Vẽ sơ đồ ERD (.drawio)...",
+                    "deadline": "2026-11-25T23:59:59+07:00",
+                    "maximum_score": "10.00",
+                    "created_by": 2,
+                    "created_at": "2026-11-06T15:00:00.000Z",
+                    "updated_at": "2026-11-06T15:50:00.000Z"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Assignments"
+        ],
+        "summary": "Xóa bài tập",
+        "description": "Chỉ dành cho Mentor phụ trách lớp học. Nếu bài tập đã có học viên nộp bài (submissions) thì không thể xóa.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID bài tập",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "example": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Xóa bài tập thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteAssignmentResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "Xóa bài tập thành công!",
+                  "data": {
+                    "id": 1,
+                    "class_id": 1,
+                    "title": "Assignment 01: Thiết kế CSDL S-Group Learning Platform"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "409": {
+            "description": "Bài tập đã có bài nộp nên không thể xóa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Không thể xóa bài tập đã có bài nộp!"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/upload/image": {
+      "post": {
+        "tags": [
+          "Upload"
+        ],
+        "summary": "Upload một file hình ảnh lên Cloudflare R2",
+        "description": "Tải lên 1 file ảnh. Định dạng hỗ trợ: jpeg, jpg, png, webp, gif. Kích thước tối đa: 2MB. Tệp tin được đẩy trực tiếp lên Cloudflare R2 và lưu metadata vào DB.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "image": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "File ảnh tải lên (key bắt buộc là 'image')"
+                  }
+                },
+                "required": [
+                  "image"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Upload ảnh lên Cloudflare R2 thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadImageResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "Upload ảnh lên Cloudflare R2 thành công!",
+                  "data": {
+                    "id": 1,
+                    "filename": "image-1730908800000-123456789.png",
+                    "original_name": "avatar.png",
+                    "mimetype": "image/png",
+                    "size": 204800,
+                    "url": "https://pub-r2.sgroup.vn/images/image-1730908800000-123456789.png",
+                    "created_at": "2026-11-06T15:00:00.000Z"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/upload/documents": {
+      "post": {
+        "tags": [
+          "Upload"
+        ],
+        "summary": "Upload nhiều file tài liệu lên Cloudflare R2",
+        "description": "Tải lên tối đa 5 file tài liệu cùng lúc. Định dạng hỗ trợ: pdf, msword (doc, docx), zip, text/plain, jpeg, png. Kích thước tối đa: 10MB/file.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "documents": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "binary"
+                    },
+                    "description": "Danh sách file tài liệu tải lên (key bắt buộc là 'documents', tối đa 5 files)"
+                  }
+                },
+                "required": [
+                  "documents"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Upload tài liệu lên Cloudflare R2 thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadDocumentsResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "Upload thành công 2 file tài liệu lên Cloudflare R2!",
+                  "data": [
+                    {
+                      "id": 2,
+                      "filename": "documents-1730908800000-111111111.pdf",
+                      "original_name": "document1.pdf",
+                      "mimetype": "application/pdf",
+                      "size": 1048576,
+                      "url": "https://pub-r2.sgroup.vn/documents/documents-1730908800000-111111111.pdf",
+                      "created_at": "2026-11-06T15:00:00.000Z"
+                    },
+                    {
+                      "id": 3,
+                      "filename": "documents-1730908800000-222222222.zip",
+                      "original_name": "project-source.zip",
+                      "mimetype": "application/zip",
+                      "size": 5242880,
+                      "url": "https://pub-r2.sgroup.vn/documents/documents-1730908800000-222222222.zip",
+                      "created_at": "2026-11-06T15:00:00.000Z"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/assignments/{id}/submissions": {
+      "post": {
+        "tags": [
+          "Submissions"
+        ],
+        "summary": "Học viên nộp bài làm cho bài tập",
+        "description": "Học viên thuộc lớp học nộp link GitHub repository và ghi chú cho bài tập được giao. Ràng buộc: Mỗi học viên chỉ được nộp bài 1 lần cho mỗi bài tập và không được nộp sau deadline.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID của bài tập cần nộp bài",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "example": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSubmissionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Nộp bài tập thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmissionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu không hợp lệ hoặc đã quá hạn nộp bài"
+          },
+          "401": {
+            "description": "Chưa đăng nhập hoặc token không hợp lệ"
+          },
+          "403": {
+            "description": "Không phải học viên thuộc lớp học này"
+          },
+          "404": {
+            "description": "Bài tập không tồn tại"
+          },
+          "409": {
+            "description": "Bạn đã nộp bài tập này rồi"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Submissions"
+        ],
+        "summary": "Lấy danh sách bài nộp của bài tập",
+        "description": "Mentor phụ trách lớp học hoặc Admin xem được toàn bộ bài nộp của học viên trong lớp. Học viên chỉ xem được bài nộp của chính mình.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID của bài tập",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "example": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lấy danh sách bài nộp thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmissionListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa đăng nhập"
+          },
+          "403": {
+            "description": "Không có quyền xem bài nộp của bài tập này"
+          },
+          "404": {
+            "description": "Bài tập không tồn tại"
+          }
+        }
+      }
+    },
+    "/submissions/{id}": {
+      "get": {
+        "tags": [
+          "Submissions"
+        ],
+        "summary": "Xem chi tiết một bài nộp",
+        "description": "Xem chi tiết bài nộp (nội dung, repository URL, thời gian nộp, điểm số, phản hồi). Quyền xem: Admin, Mentor phụ trách lớp học, hoặc chính học viên đã nộp bài.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID của bài nộp",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "example": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lấy chi tiết bài nộp thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmissionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa đăng nhập"
+          },
+          "403": {
+            "description": "Không có quyền xem bài nộp này"
+          },
+          "404": {
+            "description": "Bài nộp không tồn tại"
+          }
+        }
+      }
+    },
+    "/submissions/{id}/review": {
+      "patch": {
+        "tags": [
+          "Submissions"
+        ],
+        "summary": "Mentor chấm điểm và nhận xét bài nộp",
+        "description": "Chỉ Mentor phụ trách lớp học (hoặc Admin) mới có quyền chấm điểm. Điểm số hợp lệ nằm trong khoảng từ 0 đến điểm tối đa (maximum_score) của bài tập.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID của bài nộp cần chấm điểm",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "example": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewSubmissionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Chấm điểm bài nộp thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmissionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Điểm số không hợp lệ hoặc vượt quá điểm tối đa"
+          },
+          "401": {
+            "description": "Chưa đăng nhập"
+          },
+          "403": {
+            "description": "Chỉ Mentor phụ trách lớp này mới có quyền chấm điểm"
+          },
+          "404": {
+            "description": "Bài nộp không tồn tại"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Nhập Access Token được cấp sau khi login theo chuẩn JWT. Ví dụ: `Bearer eyJhbGciOi...`"
+      }
+    },
+    "responses": {
+      "BadRequestError": {
+        "description": "Dữ liệu yêu cầu không hợp lệ hoặc lỗi validation",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "success": false,
+              "message": "Validation failed",
+              "errors": [
+                {
+                  "field": "email",
+                  "message": "Email không đúng định dạng"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "UnauthorizedError": {
+        "description": "Chưa đăng nhập, thiếu token, token không hợp lệ hoặc đã hết hạn",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "success": false,
+              "message": "Bạn chưa đăng nhập! Vui lòng cung cấp token hợp lệ."
+            }
+          }
+        }
+      },
+      "ForbiddenError": {
+        "description": "Không có quyền thực hiện thao tác này",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "success": false,
+              "message": "Bạn không có quyền thực hiện hành động này!"
+            }
+          }
+        }
+      },
+      "NotFoundError": {
+        "description": "Không tìm thấy tài nguyên yêu cầu",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "success": false,
+              "message": "Tài nguyên không tồn tại trên hệ thống!"
+            }
+          }
+        }
+      },
+      "InternalServerError": {
+        "description": "Lỗi hệ thống máy chủ nội bộ",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "success": false,
+              "message": "Internal server error"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": false
+          },
+          "message": {
+            "type": "string",
+            "example": "Thông báo lỗi chi tiết"
+          },
+          "errors": {
+            "type": "array",
+            "description": "Danh sách chi tiết các lỗi kiểm tra tính hợp lệ dữ liệu",
+            "items": {
+              "type": "object",
+              "properties": {
+                "field": {
+                  "type": "string",
+                  "example": "email"
+                },
+                "message": {
+                  "type": "string",
+                  "example": "Email không đúng định dạng"
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "success",
+          "message"
+        ]
+      },
+      "RegisterRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 50,
+            "description": "Họ và tên người dùng (2 đến 50 ký tự)",
+            "example": "Nguyen Van A"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "Địa chỉ email hợp lệ (duy nhất trong hệ thống)",
+            "example": "nguyenvana@gmail.com"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 6,
+            "description": "Mật khẩu có tối thiểu 6 ký tự",
+            "example": "password123"
+          },
+          "age": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 120,
+            "description": "Tuổi người dùng (1 đến 120)",
+            "example": 20
+          }
+        },
+        "required": [
+          "name",
+          "email",
+          "password"
+        ]
+      },
+      "RegisterResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "Đăng ký tài khoản thành công!"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "example": 5
+              },
+              "name": {
+                "type": "string",
+                "example": "Nguyen Van A"
+              },
+              "email": {
+                "type": "string",
+                "example": "nguyenvana@gmail.com"
+              },
+              "age": {
+                "type": "integer",
+                "example": 20
+              },
+              "role": {
+                "type": "string",
+                "example": "MEMBER"
+              },
+              "created_at": {
+                "type": "string",
+                "format": "date-time",
+                "example": "2026-11-06T15:00:00.000Z"
+              }
+            }
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data"
+        ]
+      },
+      "LoginRequest": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "Email đăng nhập",
+            "example": "admin@sgroup.vn"
+          },
+          "password": {
+            "type": "string",
+            "description": "Mật khẩu",
+            "example": "password123"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "LoginResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "Đăng nhập thành công!"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "user": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "integer",
+                    "example": 1
+                  },
+                  "name": {
+                    "type": "string",
+                    "example": "Admin S-Group"
+                  },
+                  "email": {
+                    "type": "string",
+                    "example": "admin@sgroup.vn"
+                  },
+                  "role": {
+                    "type": "string",
+                    "example": "ADMIN"
+                  }
+                }
+              },
+              "accessToken": {
+                "type": "string",
+                "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+              }
+            }
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data"
+        ]
+      },
+      "UserProfileResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "Lấy thông tin cá nhân thành công!"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "example": 1
+              },
+              "name": {
+                "type": "string",
+                "example": "Admin S-Group"
+              },
+              "email": {
+                "type": "string",
+                "example": "admin@sgroup.vn"
+              },
+              "age": {
+                "type": "integer",
+                "example": 22
+              },
+              "role": {
+                "type": "string",
+                "example": "ADMIN"
+              },
+              "created_at": {
+                "type": "string",
+                "format": "date-time",
+                "example": "2026-11-06T15:00:00.000Z"
+              }
+            }
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data"
+        ]
+      },
+      "CreateUserRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 50,
+            "example": "Nguyen Van B"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "nguyenvanb@sgroup.vn"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 6,
+            "example": "password123"
+          },
+          "age": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 120,
+            "example": 21
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "ADMIN",
+              "MEMBER"
+            ],
+            "default": "MEMBER",
+            "example": "MEMBER"
+          }
+        },
+        "required": [
+          "name",
+          "email",
+          "password"
+        ]
+      },
+      "UpdateUserRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Mentor Van A Updated"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "mentor.vana.updated@sgroup.vn"
+          },
+          "age": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 120,
+            "example": 25
+          }
+        }
+      },
+      "UserResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "Get user successfully"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "example": 1
+              },
+              "name": {
+                "type": "string",
+                "example": "Admin S-Group"
+              },
+              "email": {
+                "type": "string",
+                "example": "admin@sgroup.vn"
+              },
+              "age": {
+                "type": "integer",
+                "example": 25
+              },
+              "role": {
+                "type": "string",
+                "example": "ADMIN"
+              },
+              "created_at": {
+                "type": "string",
+                "format": "date-time",
+                "example": "2026-11-06T15:00:00.000Z"
+              }
+            }
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data"
+        ]
+      },
+      "UserFullResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "User updated successfully"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "example": 1
+              },
+              "name": {
+                "type": "string",
+                "example": "Admin S-Group"
+              },
+              "email": {
+                "type": "string",
+                "example": "admin@sgroup.vn"
+              },
+              "age": {
+                "type": "integer",
+                "example": 25
+              },
+              "role": {
+                "type": "string",
+                "example": "ADMIN"
+              },
+              "avatar_url": {
+                "type": "string",
+                "nullable": true,
+                "example": null
+              },
+              "created_at": {
+                "type": "string",
+                "format": "date-time",
+                "example": "2026-11-06T15:00:00.000Z"
+              },
+              "updated_at": {
+                "type": "string",
+                "format": "date-time",
+                "example": "2026-11-06T15:00:00.000Z"
+              }
+            }
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data"
+        ]
+      },
+      "UsersListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "Get all users successfully"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "integer",
+                  "example": 1
+                },
+                "name": {
+                  "type": "string",
+                  "example": "Admin S-Group"
+                },
+                "email": {
+                  "type": "string",
+                  "example": "admin@sgroup.vn"
+                },
+                "age": {
+                  "type": "integer",
+                  "example": 25
+                },
+                "role": {
+                  "type": "string",
+                  "example": "ADMIN"
+                },
+                "avatar_url": {
+                  "type": "string",
+                  "nullable": true,
+                  "example": null
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "example": "2026-11-06T15:00:00.000Z"
+                },
+                "updated_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "example": "2026-11-06T15:00:00.000Z"
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data"
+        ]
+      },
+      "CreateClassRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 150,
+            "description": "Tên lớp học (2 - 150 ký tự)",
+            "example": "BE Basic - Batch 01"
+          },
+          "description": {
+            "type": "string",
+            "description": "Mô tả khóa học",
+            "example": "Khoá đào tạo Backend cơ bản S-Group: ExpressJS, PostgreSQL, RESTful API."
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date",
+            "description": "Ngày bắt đầu khóa học (YYYY-MM-DD)",
+            "example": "2026-03-01"
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date",
+            "description": "Ngày kết thúc khóa học (YYYY-MM-DD, >= startDate)",
+            "example": "2026-05-30"
+          },
+          "mentorId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "ID người dùng được chỉ định làm Mentor phụ trách lớp",
+            "example": 2
+          }
+        },
+        "required": [
+          "name",
+          "mentorId"
+        ]
+      },
+      "UpdateClassRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 150,
+            "example": "BE Basic - Batch 01 (Updated)"
+          },
+          "description": {
+            "type": "string",
+            "example": "Mô tả cập nhật"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date",
+            "example": "2026-03-01"
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date",
+            "example": "2026-06-30"
+          },
+          "mentorId": {
+            "type": "integer",
+            "minimum": 1,
+            "example": 2
+          }
+        }
+      },
+      "ClassItemResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "Tạo lớp học thành công!"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "example": 1
+              },
+              "name": {
+                "type": "string",
+                "example": "BE Basic - Batch 01"
+              },
+              "description": {
+                "type": "string",
+                "nullable": true,
+                "example": "Khoá đào tạo Backend..."
+              },
+              "start_date": {
+                "type": "string",
+                "format": "date",
+                "nullable": true,
+                "example": "2026-03-01"
+              },
+              "end_date": {
+                "type": "string",
+                "format": "date",
+                "nullable": true,
+                "example": "2026-05-30"
+              },
+              "mentor_id": {
+                "type": "integer",
+                "example": 2
+              },
+              "created_at": {
+                "type": "string",
+                "format": "date-time",
+                "example": "2026-11-06T15:00:00.000Z"
+              },
+              "updated_at": {
+                "type": "string",
+                "format": "date-time",
+                "example": "2026-11-06T15:00:00.000Z"
+              }
+            }
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data"
+        ]
+      },
+      "ClassDetailResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "Lấy thông tin lớp học thành công!"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "example": 1
+              },
+              "name": {
+                "type": "string",
+                "example": "BE Basic - Batch 01"
+              },
+              "description": {
+                "type": "string",
+                "nullable": true,
+                "example": "Khoá đào tạo Backend..."
+              },
+              "start_date": {
+                "type": "string",
+                "format": "date",
+                "nullable": true,
+                "example": "2026-03-01"
+              },
+              "end_date": {
+                "type": "string",
+                "format": "date",
+                "nullable": true,
+                "example": "2026-05-30"
+              },
+              "mentor_id": {
+                "type": "integer",
+                "example": 2
+              },
+              "created_at": {
+                "type": "string",
+                "format": "date-time",
+                "example": "2026-11-06T15:00:00.000Z"
+              },
+              "updated_at": {
+                "type": "string",
+                "format": "date-time",
+                "example": "2026-11-06T15:00:00.000Z"
+              },
+              "mentor_name": {
+                "type": "string",
+                "example": "Mentor Van A"
+              },
+              "mentor_email": {
+                "type": "string",
+                "example": "mentor.vana@sgroup.vn"
+              }
+            }
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data"
+        ]
+      },
+      "ClassesListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "Lấy danh sách lớp học thành công!"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "integer",
+                  "example": 1
+                },
+                "name": {
+                  "type": "string",
+                  "example": "BE Basic - Batch 01"
+                },
+                "description": {
+                  "type": "string",
+                  "nullable": true,
+                  "example": "Khoá đào tạo Backend..."
+                },
+                "start_date": {
+                  "type": "string",
+                  "format": "date",
+                  "nullable": true,
+                  "example": "2026-03-01"
+                },
+                "end_date": {
+                  "type": "string",
+                  "format": "date",
+                  "nullable": true,
+                  "example": "2026-05-30"
+                },
+                "mentor_id": {
+                  "type": "integer",
+                  "example": 2
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "example": "2026-11-06T15:00:00.000Z"
+                },
+                "updated_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "example": "2026-11-06T15:00:00.000Z"
+                },
+                "mentor_name": {
+                  "type": "string",
+                  "example": "Mentor Van A"
+                },
+                "mentor_email": {
+                  "type": "string",
+                  "example": "mentor.vana@sgroup.vn"
+                },
+                "total_members": {
+                  "type": "integer",
+                  "description": "Tổng số học viên (chỉ trả về cho ADMIN)",
+                  "example": 2
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data"
+        ]
+      },
+      "AddMemberRequest": {
+        "type": "object",
+        "properties": {
+          "memberId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "ID người dùng muốn thêm vào lớp",
+            "example": 5
+          }
+        },
+        "required": [
+          "memberId"
+        ]
+      },
+      "AddMemberResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "Thêm học viên vào lớp thành công!"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "class_id": {
+                "type": "integer",
+                "example": 1
+              },
+              "member_id": {
+                "type": "integer",
+                "example": 5
+              },
+              "joined_at": {
+                "type": "string",
+                "format": "date-time",
+                "example": "2026-11-06T15:20:00.000Z"
+              },
+              "status": {
+                "type": "string",
+                "example": "ACTIVE"
+              }
+            }
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data"
+        ]
+      },
+      "UpdateMemberStatusRequest": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "DROPPED",
+              "COMPLETED"
+            ],
+            "description": "Trạng thái mới của học viên trong lớp",
+            "example": "COMPLETED"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "ClassMemberEntityResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "Thao tác học viên thành công!"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "example": 1
+              },
+              "class_id": {
+                "type": "integer",
+                "example": 1
+              },
+              "member_id": {
+                "type": "integer",
+                "example": 3
+              },
+              "joined_at": {
+                "type": "string",
+                "format": "date-time",
+                "example": "2026-11-06T15:00:00.000Z"
+              },
+              "status": {
+                "type": "string",
+                "example": "ACTIVE"
+              }
+            }
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data"
+        ]
+      },
+      "ClassMembersListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "Lấy danh sách học viên thành công!"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "class_id": {
+                  "type": "integer",
+                  "example": 1
+                },
+                "member_id": {
+                  "type": "integer",
+                  "example": 3
+                },
+                "joined_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "example": "2026-11-06T15:00:00.000Z"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "ACTIVE",
+                    "DROPPED",
+                    "COMPLETED"
+                  ],
+                  "example": "ACTIVE"
+                },
+                "name": {
+                  "type": "string",
+                  "example": "Student Nguyen B"
+                },
+                "email": {
+                  "type": "string",
+                  "example": "student.nguyenb@sgroup.vn"
+                },
+                "age": {
+                  "type": "integer",
+                  "example": 20
+                },
+                "avatar_url": {
+                  "type": "string",
+                  "nullable": true,
+                  "example": null
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data"
+        ]
+      },
+      "CreateLessonRequest": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 255,
+            "description": "Tiêu đề bài học (2 đến 255 ký tự)",
+            "example": "01. Backend Introduction"
+          },
+          "content": {
+            "type": "string",
+            "description": "Nội dung bài học",
+            "example": "Giới thiệu kiến trúc Client-Server, tổng quan Backend."
+          },
+          "order": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Thứ tự bài học trong lớp (>= 1, duy nhất trong lớp học; nếu bỏ trống tự động tăng theo max_order + 1)",
+            "example": 1
+          }
+        },
+        "required": [
+          "title"
+        ]
+      },
+      "UpdateLessonRequest": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 255,
+            "example": "01. Backend Introduction (Updated)"
+          },
+          "content": {
+            "type": "string",
+            "example": "Nội dung bài học cập nhật"
+          },
+          "order": {
+            "type": "integer",
+            "minimum": 1,
+            "example": 1
+          }
+        }
+      },
+      "LessonDetailResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "Tạo bài học thành công!"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "example": 1
+              },
+              "class_id": {
+                "type": "integer",
+                "example": 1
+              },
+              "title": {
+                "type": "string",
+                "example": "01. Backend Introduction"
+              },
+              "content": {
+                "type": "string",
+                "nullable": true,
+                "example": "Giới thiệu kiến trúc..."
+              },
+              "order": {
+                "type": "integer",
+                "example": 1
+              },
+              "created_by": {
+                "type": "integer",
+                "example": 2
+              },
+              "created_at": {
+                "type": "string",
+                "format": "date-time",
+                "example": "2026-11-06T15:00:00.000Z"
+              },
+              "updated_at": {
+                "type": "string",
+                "format": "date-time",
+                "example": "2026-11-06T15:00:00.000Z"
+              }
+            }
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data"
+        ]
+      },
+      "LessonFullDetailResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "Lấy thông tin bài học thành công!"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "example": 1
+              },
+              "class_id": {
+                "type": "integer",
+                "example": 1
+              },
+              "title": {
+                "type": "string",
+                "example": "01. Backend Introduction"
+              },
+              "content": {
+                "type": "string",
+                "nullable": true,
+                "example": "Giới thiệu kiến trúc..."
+              },
+              "order": {
+                "type": "integer",
+                "example": 1
+              },
+              "created_by": {
+                "type": "integer",
+                "example": 2
+              },
+              "created_at": {
+                "type": "string",
+                "format": "date-time",
+                "example": "2026-11-06T15:00:00.000Z"
+              },
+              "updated_at": {
+                "type": "string",
+                "format": "date-time",
+                "example": "2026-11-06T15:00:00.000Z"
+              },
+              "class_name": {
+                "type": "string",
+                "example": "BE Basic - Batch 01"
+              },
+              "mentor_id": {
+                "type": "integer",
+                "example": 2
+              },
+              "creator_name": {
+                "type": "string",
+                "example": "Mentor Van A"
+              }
+            }
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data"
+        ]
+      },
+      "LessonsListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "Lấy danh sách bài học thành công!"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "integer",
+                  "example": 1
+                },
+                "class_id": {
+                  "type": "integer",
+                  "example": 1
+                },
+                "title": {
+                  "type": "string",
+                  "example": "01. Backend Introduction"
+                },
+                "content": {
+                  "type": "string",
+                  "nullable": true,
+                  "example": "Giới thiệu..."
+                },
+                "order": {
+                  "type": "integer",
+                  "example": 1
+                },
+                "created_by": {
+                  "type": "integer",
+                  "example": 2
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "example": "2026-11-06T15:00:00.000Z"
+                },
+                "updated_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "example": "2026-11-06T15:00:00.000Z"
+                },
+                "is_completed": {
+                  "type": "boolean",
+                  "description": "Đã hoàn thành bài học chưa (chỉ trả về cho học viên trong lớp)",
+                  "example": true
+                },
+                "completed_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "nullable": true,
+                  "example": "2026-11-06T15:30:00.000Z"
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data"
+        ]
+      },
+      "CompleteLessonResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "Đánh dấu hoàn thành bài học thành công!"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "example": 1
+              },
+              "lesson_id": {
+                "type": "integer",
+                "example": 2
+              },
+              "member_id": {
+                "type": "integer",
+                "example": 3
+              },
+              "completed_at": {
+                "type": "string",
+                "format": "date-time",
+                "example": "2026-11-06T15:40:00.000Z"
+              }
+            }
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data"
+        ]
+      },
+      "ClassProgressResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "Lấy tiến độ học tập thành công!"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "totalLessons": {
+                "type": "integer",
+                "description": "Tổng số bài học của lớp",
+                "example": 4
+              },
+              "completedLessons": {
+                "type": "integer",
+                "description": "Số bài học học viên đã hoàn thành",
+                "example": 2
+              },
+              "progress": {
+                "type": "integer",
+                "description": "Phần trăm hoàn thành bài học (0 - 100%)",
+                "example": 50
+              }
+            }
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data"
+        ]
+      },
+      "CreateAssignmentRequest": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 255,
+            "description": "Tiêu đề bài tập (2 đến 255 ký tự)",
+            "example": "Assignment 01: Thiết kế CSDL S-Group Learning Platform"
+          },
+          "description": {
+            "type": "string",
+            "description": "Mô tả yêu cầu bài tập",
+            "example": "Vẽ sơ đồ ERD (.drawio) và viết file DDL SQL có đầy đủ Constraints & Indexes."
+          },
+          "deadline": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Hạn nộp bài đúng chuẩn ISO 8601 kèm múi giờ (ví dụ +07:00 hoặc Z)",
+            "example": "2026-11-20T23:59:59+07:00"
+          },
+          "maximumScore": {
+            "type": "number",
+            "minimum": 0.01,
+            "maximum": 999.99,
+            "description": "Điểm tối đa của bài tập (mặc định 10.00, tối đa 2 chữ số thập phân)",
+            "example": 10
+          }
+        },
+        "required": [
+          "title",
+          "deadline"
+        ]
+      },
+      "UpdateAssignmentRequest": {
+        "type": "object",
+        "description": "Ít nhất 1 trường cần cập nhật, không được chứa trường lạ",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 255,
+            "example": "Assignment 01: Thiết kế CSDL (Updated)"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "example": "Mô tả bài tập cập nhật"
+          },
+          "deadline": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-11-25T23:59:59+07:00"
+          },
+          "maximumScore": {
+            "type": "number",
+            "minimum": 0.01,
+            "maximum": 999.99,
+            "example": 10
+          }
+        }
+      },
+      "AssignmentDetailResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "Tạo bài tập thành công!"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "example": 1
+              },
+              "class_id": {
+                "type": "integer",
+                "example": 1
+              },
+              "title": {
+                "type": "string",
+                "example": "Assignment 01: Thiết kế CSDL S-Group Learning Platform"
+              },
+              "description": {
+                "type": "string",
+                "nullable": true,
+                "example": "Vẽ sơ đồ ERD..."
+              },
+              "deadline": {
+                "type": "string",
+                "format": "date-time",
+                "example": "2026-11-20T23:59:59+07:00"
+              },
+              "maximum_score": {
+                "type": "string",
+                "example": "10.00"
+              },
+              "created_by": {
+                "type": "integer",
+                "example": 2
+              },
+              "created_at": {
+                "type": "string",
+                "format": "date-time",
+                "example": "2026-11-06T15:00:00.000Z"
+              },
+              "updated_at": {
+                "type": "string",
+                "format": "date-time",
+                "example": "2026-11-06T15:00:00.000Z"
+              }
+            }
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data"
+        ]
+      },
+      "AssignmentsListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "Lấy danh sách bài tập thành công!"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "integer",
+                  "example": 1
+                },
+                "class_id": {
+                  "type": "integer",
+                  "example": 1
+                },
+                "title": {
+                  "type": "string",
+                  "example": "Assignment 01: Thiết kế CSDL S-Group Learning Platform"
+                },
+                "description": {
+                  "type": "string",
+                  "nullable": true,
+                  "example": "Vẽ sơ đồ ERD..."
+                },
+                "deadline": {
+                  "type": "string",
+                  "format": "date-time",
+                  "example": "2026-11-20T23:59:59+07:00"
+                },
+                "maximum_score": {
+                  "type": "string",
+                  "example": "10.00"
+                },
+                "created_by": {
+                  "type": "integer",
+                  "example": 2
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "example": "2026-11-06T15:00:00.000Z"
+                },
+                "updated_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "example": "2026-11-06T15:00:00.000Z"
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data"
+        ]
+      },
+      "DeleteAssignmentResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "Xóa bài tập thành công!"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "example": 1
+              },
+              "class_id": {
+                "type": "integer",
+                "example": 1
+              },
+              "title": {
+                "type": "string",
+                "example": "Assignment 01: Thiết kế CSDL S-Group Learning Platform"
+              }
+            }
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data"
+        ]
+      },
+      "UploadImageResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "Upload ảnh lên Cloudflare R2 thành công!"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "example": 1
+              },
+              "filename": {
+                "type": "string",
+                "example": "image-1730908800000-123456789.png"
+              },
+              "original_name": {
+                "type": "string",
+                "example": "avatar.png"
+              },
+              "mimetype": {
+                "type": "string",
+                "example": "image/png"
+              },
+              "size": {
+                "type": "integer",
+                "example": 204800
+              },
+              "url": {
+                "type": "string",
+                "format": "uri",
+                "example": "https://pub-r2.sgroup.vn/images/image-1730908800000-123456789.png"
+              },
+              "created_at": {
+                "type": "string",
+                "format": "date-time",
+                "example": "2026-11-06T15:00:00.000Z"
+              }
+            }
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data"
+        ]
+      },
+      "UploadDocumentsResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "Upload thành công 2 file tài liệu lên Cloudflare R2!"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "integer",
+                  "example": 2
+                },
+                "filename": {
+                  "type": "string",
+                  "example": "documents-1730908800000-111111111.pdf"
+                },
+                "original_name": {
+                  "type": "string",
+                  "example": "document1.pdf"
+                },
+                "mimetype": {
+                  "type": "string",
+                  "example": "application/pdf"
+                },
+                "size": {
+                  "type": "integer",
+                  "example": 1048576
+                },
+                "url": {
+                  "type": "string",
+                  "format": "uri",
+                  "example": "https://pub-r2.sgroup.vn/documents/documents-1730908800000-111111111.pdf"
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "example": "2026-11-06T15:00:00.000Z"
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data"
+        ]
+      },
+      "CreateSubmissionRequest": {
+        "type": "object",
+        "properties": {
+          "repositoryUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "Đường dẫn kho lưu trữ mã nguồn GitHub hợp lệ",
+            "example": "https://github.com/studentB/sgroup-db-assignment"
+          },
+          "content": {
+            "type": "string",
+            "description": "Nội dung hoặc ghi chú đính kèm khi nộp bài",
+            "example": "Em xin nộp bài tập thiết kế CSDL. Đã hoàn thành sơ đồ ERD và file DDL SQL."
+          }
+        },
+        "required": [
+          "repositoryUrl"
+        ]
+      },
+      "ReviewSubmissionRequest": {
+        "type": "object",
+        "properties": {
+          "score": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 999.99,
+            "description": "Điểm số chấm cho bài nộp (không vượt quá điểm tối đa của bài tập, tối đa 2 chữ số thập phân)",
+            "example": 9.5
+          },
+          "feedback": {
+            "type": "string",
+            "description": "Nhận xét, phản hồi chi tiết của Mentor cho bài nộp",
+            "example": "Bài làm rất tốt, cấu trúc database chuẩn chỉnh, có đầy đủ foreign key và index."
+          }
+        },
+        "required": [
+          "score"
+        ]
+      },
+      "SubmissionData": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "1"
+          },
+          "assignment_id": {
+            "type": "string",
+            "example": "1"
+          },
+          "member_id": {
+            "type": "string",
+            "example": "3"
+          },
+          "content": {
+            "type": "string",
+            "example": "Em xin nộp bài tập thiết kế CSDL."
+          },
+          "repository_url": {
+            "type": "string",
+            "format": "uri",
+            "example": "https://github.com/studentB/sgroup-db-assignment"
+          },
+          "submitted_at": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-11-08T10:00:00.000Z"
+          },
+          "score": {
+            "type": "string",
+            "nullable": true,
+            "example": "9.50"
+          },
+          "feedback": {
+            "type": "string",
+            "nullable": true,
+            "example": "Bài làm rất tốt."
+          },
+          "reviewed_by": {
+            "type": "string",
+            "nullable": true,
+            "example": "2"
+          },
+          "reviewed_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "example": "2026-11-08T11:00:00.000Z"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "SUBMITTED",
+              "REVIEWED"
+            ],
+            "example": "REVIEWED"
+          },
+          "member_name": {
+            "type": "string",
+            "example": "Student Nguyen B"
+          },
+          "member_email": {
+            "type": "string",
+            "example": "student.nguyenb@sgroup.vn"
+          },
+          "member_avatar": {
+            "type": "string",
+            "nullable": true,
+            "example": null
+          },
+          "reviewer_name": {
+            "type": "string",
+            "nullable": true,
+            "example": "Mentor Van A"
+          },
+          "reviewer_email": {
+            "type": "string",
+            "nullable": true,
+            "example": "mentor.vana@sgroup.vn"
+          }
+        }
+      },
+      "SubmissionResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "Thao tác bài nộp thành công!"
+          },
+          "data": {
+            "$ref": "#/components/schemas/SubmissionData"
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data"
+        ]
+      },
+      "SubmissionListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "Lấy danh sách bài nộp thành công!"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SubmissionData"
+            }
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data"
+        ]
+      }
+    }
+  },
+  "security": [
+    {
+      "BearerAuth": []
+    }
+  ]
+}

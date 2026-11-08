@@ -7,7 +7,9 @@ const router = Router();
 
 router.post("/register", validate(registerRules), authController.register);
 router.post("/login", validate(loginRules), authController.login);
+router.post("/logout", authenticateToken, authController.logout);
 
 router.get("/me", authenticateToken, authController.getMe);
+
 
 export default router;

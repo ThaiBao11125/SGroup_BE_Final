@@ -1,7 +1,7 @@
 import * as userRepository from "../repository/user.repository.js";
 import { ConflictError, UnauthorizedError, NotFoundError } from "../core/error.response.js";
 import { hashPassword, comparePassword } from "../utils/password.helper.js";
-import { generateToken } from "../utils/jwt.helper.js";
+import { generateToken, blacklistToken } from "../utils/jwt.helper.js";
 
 export const register = async ({ name, email, password, age, role }) => {
   const existingUser = await userRepository.findByEmail(email);
@@ -58,4 +58,11 @@ export const getMe = async (userId) => {
     throw new NotFoundError("Người dùng không còn tồn tại trên hệ thống!");
   }
   return user;
+};
+
+export const logout = async (token) => {
+  if (token) {
+    blacklistToken(token);
+  }
+  return true;
 };

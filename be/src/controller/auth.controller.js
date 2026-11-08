@@ -17,3 +17,8 @@ export const getMe = catchAsync(async (req, res) => {
   const userProfile = await authService.getMe(currentUserId);
   return sendSuccess(res, 200, "Lấy thông tin cá nhân thành công!", userProfile);
 });
+
+export const logout = catchAsync(async (req, res) => {
+  await authService.logout(req.token);
+  return sendSuccess(res, 200, "Đăng xuất thành công!");
+});
