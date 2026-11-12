@@ -1,4 +1,6 @@
 import pool from "../config/database.config.js";
+import { ClassEntity } from "../entities/class.entity.js";
+import { ClassMember, ClassMemberStatus } from "../entities/class-member.entity.js";
 
 export const createClass = async ({ name, description, startDate, endDate, mentorId }) => {
   const query = `
@@ -7,7 +9,7 @@ export const createClass = async ({ name, description, startDate, endDate, mento
     RETURNING id, name, description, start_date, end_date, mentor_id, created_at, updated_at;
   `;
   const result = await pool.query(query, [name, description, startDate, endDate, mentorId]);
-  return result.rows[0];
+  return ClassEntity.fromRow(result.rows[0]);
 };
 
 export const findClassById = async (id) => {
@@ -18,7 +20,7 @@ export const findClassById = async (id) => {
     WHERE c.id = $1;
   `;
   const result = await pool.query(query, [id]);
-  return result.rows[0] || null;
+  return ClassEntity.fromRow(result.rows[0]);
 };
 
 export const findAllClasses = async () => {
@@ -32,7 +34,7 @@ export const findAllClasses = async () => {
     ORDER BY c.id ASC;
   `;
   const result = await pool.query(query);
-  return result.rows;
+  return ClassEntity.fromRows(result.rows);
 };
 
 export const findClassesByMemberId = async (memberId) => {
@@ -45,7 +47,7 @@ export const findClassesByMemberId = async (memberId) => {
     ORDER BY c.id ASC;
   `;
   const result = await pool.query(query, [memberId]);
-  return result.rows;
+  return ClassEntity.fromRows(result.rows);
 };
 
 export const updateClass = async (id, { name, description, startDate, endDate, mentorId }) => {
@@ -61,13 +63,13 @@ export const updateClass = async (id, { name, description, startDate, endDate, m
     RETURNING *;
   `;
   const result = await pool.query(query, [name, description, startDate, endDate, mentorId, id]);
-  return result.rows[0] || null;
+  return ClassEntity.fromRow(result.rows[0]);
 };
 
 export const deleteClass = async (id) => {
   const query = `DELETE FROM classes WHERE id = $1 RETURNING *;`;
   const result = await pool.query(query, [id]);
-  return result.rows[0] || null;
+  return ClassEntity.fromRow(result.rows[0]);
 };
 
 export const isMemberInClass = async (classId, memberId) => {
@@ -79,14 +81,14 @@ export const isMemberInClass = async (classId, memberId) => {
   return result.rowCount > 0;
 };
 
-export const addMemberToClass = async (classId, memberId, status = "ACTIVE") => {
+export const addMemberToClass = async (classId, memberId, status = ClassMemberStatus.ACTIVE) => {
   const query = `
     INSERT INTO class_members (class_id, member_id, status)
     VALUES ($1, $2, $3)
     RETURNING class_id, member_id, joined_at, status;
   `;
   const result = await pool.query(query, [classId, memberId, status]);
-  return result.rows[0];
+  return ClassMember.fromRow(result.rows[0]);
 };
 
 export const getMembersInClass = async (classId) => {
@@ -99,7 +101,7 @@ export const getMembersInClass = async (classId) => {
     ORDER BY cm.joined_at ASC;
   `;
   const result = await pool.query(query, [classId]);
-  return result.rows;
+  return ClassMember.fromRows(result.rows);
 };
 
 export const removeMemberFromClass = async (classId, memberId) => {
@@ -109,5 +111,5 @@ export const removeMemberFromClass = async (classId, memberId) => {
     RETURNING *;
   `;
   const result = await pool.query(query, [classId, memberId]);
-  return result.rows[0] || null;
+  return ClassMember.fromRow(result.rows[0]);
 };

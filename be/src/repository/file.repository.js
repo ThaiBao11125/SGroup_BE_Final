@@ -1,4 +1,6 @@
 import pool from "../config/database.config.js";
+import { UploadedFile } from "../entities/file.entity.js";
+import { User } from "../entities/user.entity.js";
 
 export const saveFileInfo = async ({ filename, originalName, mimetype, size, url }) => {
   const queryText = `
@@ -8,7 +10,7 @@ export const saveFileInfo = async ({ filename, originalName, mimetype, size, url
   `;
   const values = [filename, originalName, mimetype, size, url];
   const result = await pool.query(queryText, values);
-  return result.rows[0];
+  return UploadedFile.fromRow(result.rows[0]);
 };
 
 export const saveMultipleFilesInfo = async (filesList) => {
@@ -28,5 +30,5 @@ export const updateUserAvatar = async (userId, avatarUrl) => {
     RETURNING id, name, email, avatar_url;
   `;
   const result = await pool.query(queryText, [avatarUrl, userId]);
-  return result.rows[0];
+  return User.fromRow(result.rows[0]);
 };

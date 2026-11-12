@@ -1,5 +1,7 @@
 import pool from "../config/database.config.js";
 import { ConflictError } from "../core/error.response.js";
+import { Lesson } from "../entities/lesson.entity.js";
+import { LessonProgress } from "../entities/lesson-progress.entity.js";
 
 export const createLesson = async ({ classId, title, content, order, createdBy }) => {
   try {
@@ -9,7 +11,7 @@ export const createLesson = async ({ classId, title, content, order, createdBy }
       RETURNING id, class_id, title, content, "order", created_by, created_at, updated_at;
     `;
     const result = await pool.query(query, [classId, title, content, order, createdBy]);
-    return result.rows[0];
+    return Lesson.fromRow(result.rows[0]);
   } catch (error) {
     if (error.code === "23505") {
       throw new ConflictError("Thứ tự bài học (order) này đã tồn tại trong lớp học!");
@@ -27,7 +29,7 @@ export const findLessonById = async (id) => {
     WHERE l.id = $1;
   `;
   const result = await pool.query(query, [id]);
-  return result.rows[0] || null;
+  return Lesson.fromRow(result.rows[0]);
 };
 
 export const findLessonsByClassId = async (classId, memberId = null) => {
@@ -42,7 +44,7 @@ export const findLessonsByClassId = async (classId, memberId = null) => {
       ORDER BY l."order" ASC;
     `;
     const result = await pool.query(query, [classId, memberId]);
-    return result.rows;
+    return Lesson.fromRows(result.rows);
   }
 
   const query = `
@@ -52,7 +54,7 @@ export const findLessonsByClassId = async (classId, memberId = null) => {
     ORDER BY l."order" ASC;
   `;
   const result = await pool.query(query, [classId]);
-  return result.rows;
+  return Lesson.fromRows(result.rows);
 };
 
 export const updateLesson = async (id, { title, content, order }) => {
@@ -67,7 +69,7 @@ export const updateLesson = async (id, { title, content, order }) => {
       RETURNING id, class_id, title, content, "order", created_by, created_at, updated_at;
     `;
     const result = await pool.query(query, [title, content, order, id]);
-    return result.rows[0] || null;
+    return Lesson.fromRow(result.rows[0]);
   } catch (error) {
     if (error.code === "23505") {
       throw new ConflictError("Thứ tự bài học (order) này đã tồn tại trong lớp học!");
@@ -79,7 +81,7 @@ export const updateLesson = async (id, { title, content, order }) => {
 export const deleteLesson = async (id) => {
   const query = `DELETE FROM lessons WHERE id = $1 RETURNING *;`;
   const result = await pool.query(query, [id]);
-  return result.rows[0] || null;
+  return Lesson.fromRow(result.rows[0]);
 };
 
 export const markLessonComplete = async (lessonId, memberId) => {
@@ -91,7 +93,7 @@ export const markLessonComplete = async (lessonId, memberId) => {
     RETURNING id, lesson_id, member_id, completed_at;
   `;
   const result = await pool.query(query, [lessonId, memberId]);
-  return result.rows[0];
+  return LessonProgress.fromRow(result.rows[0]);
 };
 
 export const getClassProgress = async (classId, memberId) => {

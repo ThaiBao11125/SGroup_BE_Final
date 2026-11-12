@@ -2,6 +2,8 @@ import * as classMemberRepo from "../repository/class-member.repository.js";
 import * as classRepo from "../repository/class.repository.js"; 
 import * as userRepo from "../repository/user.repository.js";
 import { NotFoundError, ConflictError, BadRequestError, ForbiddenError } from "../core/error.response.js";
+import { ClassMemberStatus } from "../entities/class-member.entity.js";
+import { UserRole } from "../entities/user.entity.js";
 
 export const addMember = async (classId, memberId) => {
   const classInfo = await classRepo.findClassById(classId);
@@ -31,7 +33,7 @@ export const getMembers = async (classId, currentUser) => {
     throw new NotFoundError("Lớp học không tồn tại!");
   }
 
-  if (currentUser.role === "MEMBER") {
+  if (currentUser.role === UserRole.MEMBER) {
     const isMentor = parseInt(classInfo.mentor_id) === parseInt(currentUser.id);
     const isMember = await classMemberRepo.checkMemberExists(classId, currentUser.id);
 
@@ -47,7 +49,7 @@ export const updateStatus = async (classId, memberId, status) => {
   const classInfo = await classRepo.findClassById(classId);
   if (!classInfo) throw new NotFoundError("Lớp học không tồn tại!");
 
-  const validStatuses = ['ACTIVE', 'DROPPED', 'COMPLETED'];
+  const validStatuses = Object.values(ClassMemberStatus);
   if (!validStatuses.includes(status)) {
     throw new BadRequestError("Trạng thái không hợp lệ!");
   }
