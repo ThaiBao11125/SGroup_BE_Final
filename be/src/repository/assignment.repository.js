@@ -1,4 +1,5 @@
 import pool from "../config/database.config.js";
+import { Assignment } from "../entities/assignment.entity.js";
 
 export const createAssignment = async ({ classId, title, description, deadline, maximumScore, createdBy }) => {
   const query = `
@@ -7,7 +8,7 @@ export const createAssignment = async ({ classId, title, description, deadline, 
     RETURNING id, class_id, title, description, deadline, maximum_score, created_by, created_at, updated_at;
   `;
   const result = await pool.query(query, [classId, title, description, deadline, maximumScore, createdBy]);
-  return result.rows[0];
+  return Assignment.fromRow(result.rows[0]);
 };
 
 export const findAssignmentsByClassId = async (classId) => {
@@ -18,7 +19,7 @@ export const findAssignmentsByClassId = async (classId) => {
     ORDER BY created_at DESC, id DESC;
   `;
   const result = await pool.query(query, [classId]);
-  return result.rows;
+  return Assignment.fromRows(result.rows);
 };
 
 export const findAssignmentById = async (id) => {
@@ -28,7 +29,7 @@ export const findAssignmentById = async (id) => {
     WHERE id = $1;
   `;
   const result = await pool.query(query, [id]);
-  return result.rows[0] || null;
+  return Assignment.fromRow(result.rows[0]);
 };
 
 const UPDATABLE_COLUMNS = {
@@ -57,7 +58,7 @@ export const updateAssignmentById = async (id, fields) => {
     RETURNING id, class_id, title, description, deadline, maximum_score, created_by, created_at, updated_at;
   `;
   const result = await pool.query(query, values);
-  return result.rows[0] || null;
+  return Assignment.fromRow(result.rows[0]);
 };
 
 export const deleteAssignmentById = async (id) => {
@@ -100,7 +101,7 @@ export const deleteAssignmentById = async (id) => {
 
     return {
       status: "DELETED",
-      assignment: result.rows[0]
+      assignment: Assignment.fromRow(result.rows[0])
     };
   } catch (error) {
     try {

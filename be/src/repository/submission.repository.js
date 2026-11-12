@@ -1,5 +1,6 @@
 import pool from "../config/database.config.js";
 import { ConflictError } from "../core/error.response.js";
+import { Submission, SubmissionStatus } from "../entities/submission.entity.js";
 
 export const createSubmission = async ({ assignmentId, memberId, content, repositoryUrl }) => {
   try {
@@ -10,7 +11,7 @@ export const createSubmission = async ({ assignmentId, memberId, content, reposi
                 score, feedback, reviewed_by, reviewed_at, status;
     `;
     const result = await pool.query(query, [assignmentId, memberId, content, repositoryUrl]);
-    return result.rows[0];
+    return Submission.fromRow(result.rows[0]);
   } catch (error) {
     if (error.code === "23505") {
       throw new ConflictError("Bạn đã nộp bài cho bài tập này rồi!");
@@ -41,7 +42,7 @@ export const findSubmissionsByAssignmentId = async (assignmentId, memberId = nul
     ORDER BY s.submitted_at DESC, s.id DESC;
   `;
   const result = await pool.query(query, values);
-  return result.rows;
+  return Submission.fromRows(result.rows);
 };
 
 export const findSubmissionById = async (id) => {
@@ -60,7 +61,7 @@ export const findSubmissionById = async (id) => {
     WHERE s.id = $1;
   `;
   const result = await pool.query(query, [id]);
-  return result.rows[0] || null;
+  return Submission.fromRow(result.rows[0]);
 };
 
 export const findSubmissionByAssignmentAndMember = async (assignmentId, memberId) => {
@@ -69,7 +70,7 @@ export const findSubmissionByAssignmentAndMember = async (assignmentId, memberId
     WHERE assignment_id = $1 AND member_id = $2;
   `;
   const result = await pool.query(query, [assignmentId, memberId]);
-  return result.rows[0] || null;
+  return Submission.fromRow(result.rows[0]);
 };
 
 export const reviewSubmission = async (id, { score, feedback, reviewerId }) => {
@@ -79,11 +80,11 @@ export const reviewSubmission = async (id, { score, feedback, reviewerId }) => {
         feedback = $2,
         reviewed_by = $3,
         reviewed_at = CURRENT_TIMESTAMP,
-        status = 'REVIEWED'
-    WHERE id = $4
+        status = $4
+    WHERE id = $5
     RETURNING id, assignment_id, member_id, content, repository_url, submitted_at,
               score, feedback, reviewed_by, reviewed_at, status;
   `;
-  const result = await pool.query(query, [score, feedback, reviewerId, id]);
-  return result.rows[0] || null;
+  const result = await pool.query(query, [score, feedback, reviewerId, SubmissionStatus.REVIEWED, id]);
+  return Submission.fromRow(result.rows[0]);
 };
